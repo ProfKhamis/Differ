@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khamis DYNAMIC STRAT | ULTRA-LOW LATENCY ENGINE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #00d2ff; --accent: #9d50bb; --success: #00ff88; --danger: #ff4b2b; --glass: rgba(15, 20, 25, 0.85); }
+        body { background: radial-gradient(circle at top right, #1a1c2c, #0a0b10); color: #e0e0e0; font-family: 'Inter', sans-serif; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 10px; box-sizing: border-box; }
+        #audit-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); background: rgba(10, 11, 16, 0.95); border: 2px solid var(--primary); padding: 25px; border-radius: 20px; backdrop-filter: blur(25px); z-index: 10000; opacity: 0; pointer-events: none; transition: 0.1s cubic-bezier(0.075, 0.82, 0.165, 1); text-align: center; box-shadow: 0 0 50px rgba(0, 0, 0, 0.9); width: 85%; max-width: 340px; }
+        #audit-modal.active { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+        .audit-title { font-family: 'Orbitron'; font-size: 1.1rem; color: #fff; letter-spacing: 1px; margin-bottom: 15px; }
+        .audit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .audit-box { background: rgba(255,255,255,0.04); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .audit-num { font-family: 'Orbitron'; font-size: 1.8rem; font-weight: bold; margin-top: 5px; }
+        .glass-panel { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; width: 100%; max-width: 950px; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); margin-top: 10px; }
+        .main-col { width: 100%; }
+        .data-col { width: 100%; margin-top: 15px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .stat-box { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); text-align: center; }
+        .stat-label { font-size: 0.65rem; color: #8b949e; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+        .stat-val { font-size: 1.1rem; font-weight: 700; font-family: 'Orbitron'; }
+        .config-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; background: rgba(255,255,255,0.01); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); }
+        .config-box { display: flex; flex-direction: column; gap: 4px; }
+        .config-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 8px; border-radius: 8px; font-family: 'Orbitron'; font-size: 0.9rem; text-align: center; outline: none; transition: 0.2s; }
+        .digit-hero { background: rgba(255,255,255,0.02); border-radius: 15px; padding: 25px 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05); position: relative; }
+        #digit { font-family: 'Orbitron'; font-size: 6.5rem; font-weight: 700; color: var(--primary); line-height: 1; margin: 10px 0; text-shadow: 0 0 20px rgba(0, 210, 255, 0.3); }
+        .progress-container { margin: 10px 0; }
+        .progress-bar { background: rgba(255,255,255,0.05); height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); }
+        #progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: 0.5s; }
+        .log-container { background: rgba(0,0,0,0.4); border-radius: 12px; max-height: 250px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        th { padding: 12px 10px; color: #8b949e; border-bottom: 1px solid rgba(255,255,255,0.08); text-transform: uppercase; font-size: 0.65rem; background: rgba(0,0,0,0.2); }
+        td { padding: 11px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.03); font-weight: 500; color: #ffffff; }
+        .btn-action { background: linear-gradient(45deg, var(--primary), var(--accent)); border: none; color: white; padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; font-family: 'Orbitron'; text-transform: uppercase; width: 100%; box-shadow: 0 8px 15px rgba(0, 210, 255, 0.2); transition: 0.2s; }
+        @media (min-width: 768px) { .glass-panel { flex-direction: row; padding: 30px; } .main-col { flex: 1.3; } .data-col { flex: 1.1; display: flex; flex-direction: column; gap: 15px; margin-top: 0; } #digit { font-size: 8.5rem; } .log-container { max-height: 340px; } }
+    </style>
+</head>
+<body>
+
+<div id="audit-modal">
+    <div class="audit-title" id="audit-title">SPEED AUDIT DISPATCHED</div>
+    <div class="audit-grid">
+        <div class="audit-box"><div class="stat-label">Target Barrier</div><div class="audit-num" id="audit-target" style="color: var(--primary);">--</div></div>
+        <div class="audit-box"><div class="stat-label">Exit Tick Digit</div><div class="audit-num" id="audit-exit" style="color: #fff;">--</div></div>
+    </div>
+    <div id="audit-outcome" style="font-family: 'Orbitron'; font-weight: bold; font-size: 1.2rem; padding: 5px 0;">--</div>
+    <button class="btn-action" style="margin-top:15px; padding:10px; font-size:0.75rem;" onclick="closeAudit()">Dismiss Audit Panel</button>
+</div>
+
+<div class="glass-panel">
+    <div class="main-col">
+        <div class="config-grid" style="grid-template-columns: 1fr; margin-bottom: 15px; border-color: var(--primary);">
+            <div class="config-box">
+                <label class="stat-label" style="color: var(--primary); font-weight: bold;">Deriv API Authentication</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="password" id="api-token" class="config-input" style="flex: 1; text-align: left; padding-left: 12px;" placeholder="Paste your Deriv API Account Token here...">
+                    <button id="btn-connect" class="btn-action" style="padding: 0 20px; width: auto; font-size: 0.8rem;" onclick="connectAccount()">Connect Bot</button>
+                </div>
+            </div>
+            <div class="config-box" style="flex-direction: row; align-items: center; justify-content: center; gap: 10px; margin-top: 5px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                <input type="checkbox" id="param-special" style="accent-color: var(--primary); transform: scale(1.2); cursor: pointer;" onchange="specialModeEnabled = this.checked; precompileExecutionEngine();">
+                <label for="param-special" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.75rem;">Special Mode (Over 0 / Under 9)</label>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.3 (EXTREME SPEED)</div>
+            <div id="mkt-badge" style="font-size: 0.65rem; background: rgba(0,210,255,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--primary); font-family: 'Orbitron';">DISCONNECTED</div>
+        </div>
+
+        <div class="digit-hero">
+            <div id="digit">--</div>
+            <div id="status" style="font-size: 0.7rem; color: #8b949e; letter-spacing: 1px; font-weight: bold; text-transform: uppercase;">ENTER API TOKEN ABOVE TO BEGIN</div>
+        </div>
+
+        <div class="progress-container">
+            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; font-weight: 600;">
+                <span id="prog-label">SESSION MILESTONE PROGRESS</span>
+                <span id="prog-val">$0.00 / $2.50</span>
+            </div>
+            <div class="progress-bar"><div id="progress-fill"></div></div>
+        </div>
+        
+        <div class="stat-grid" style="margin-top: 15px;">
+            <div class="stat-box"><div class="stat-label">Active Milestone</div><div id="ui-milestone" class="stat-val" style="color:var(--primary)">1 / 4</div></div>
+            <div class="stat-box"><div class="stat-label">Total Net Profit</div><div id="ui-total-profit" class="stat-val" style="color:var(--success)">$0.00</div></div>
+        </div>
+    </div>
+
+    <div class="data-col">
+        <div class="stat-grid">
+            <div class="stat-box"><div class="stat-label">Live Balance</div><div id="bal" class="stat-val" style="color:var(--success)">$0.00</div></div>
+            <div class="stat-box"><div class="stat-label">Current Stake</div><div id="stk" class="stat-val">$2.00</div></div>
+        </div>
+
+        <div class="config-grid">
+            <div class="config-box"><label class="stat-label">Base Stake ($)</label><input type="number" id="param-stake" class="config-input" value="2.00" step="0.5" oninput="syncParameters()"></div>
+            <div class="config-box"><label class="stat-label">Staking Engine</label><input type="text" class="config-input" value="PREV + PROFIT" disabled style="opacity:0.6; font-size:0.75rem; color:var(--success);"></div>
+            <div class="config-box"><label class="stat-label">Ultimate TP ($)</label><input type="number" id="param-tp" class="config-input" value="10.00" step="1" oninput="syncParameters()"></div>
+            <div class="config-box"><label class="stat-label">Stop Loss ($)</label><input type="number" id="param-sl" class="config-input" value="15.00" step="1" oninput="syncParameters()"></div>
+        </div>
+
+        <div class="log-container">
+            <table>
+                <thead><tr><th>MARKET</th><th>TARGET TYPE</th><th>EXIT TICK</th><th>RESULT</th><th>STAKE</th></tr></thead>
+                <tbody id="logs"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const DOM = {};
+    window.addEventListener('DOMContentLoaded', () => {
+        ['api-token', 'param-special', 'status', 'mkt-badge', 'digit', 'prog-label', 'prog-val', 'progress-fill', 
+         'ui-milestone', 'ui-total-profit', 'bal', 'stk', 'param-stake', 
+         'param-tp', 'param-sl', 'logs', 'audit-modal', 'audit-target', 'audit-exit', 'audit-outcome']
+        .forEach(id => DOM[id] = document.getElementById(id));
+    });
+
+    const APP_ID = 126967;
+    let CONFIG = { stake: 2.00, tp: 10.00, sl: 15.00 };
+    
+    const MILESTONE_SESSIONS = 4; 
+    let currentMilestone = 1, subMilestoneTarget = 0.00, subMilestoneProfit = 0.00, totalProfit = 0.00;
+    
+    let MARKETS = [], mIdx = 0, trades = 0, consecutiveLosses = 0;
+    let botStopped = true, isCooldown = false;
+    let ws = null;
+    let currentStrategyMode = 'OVER'; 
+
+    let ENGINE_STATE = 'IDLE'; 
+    let subscribedTickSymbol = null; 
+
+    let prevTick = -1;
+    let currTick = -1;
+
+    let currentRunningStake = 2.00;
+    let cachedStakeStr = "2.00";
+    let activeThreshold = 0;      
+    let activeBuyPayload = "";    
+    let specialModeEnabled = false; 
+
+    function syncParameters() {
+        if(!DOM['param-stake']) return; 
+        CONFIG.stake = parseFloat(DOM['param-stake'].value) || 2.00;
+        CONFIG.tp = parseFloat(DOM['param-tp'].value) || 10.00;
+        CONFIG.sl = parseFloat(DOM['param-sl'].value) || 15.00;
+        subMilestoneTarget = CONFIG.tp / MILESTONE_SESSIONS;
+        
+        if (botStopped) {
+            currentRunningStake = CONFIG.stake;
+        }
+        precompileExecutionEngine(); 
+    }
+
+    function precompileExecutionEngine() {
+        if (botStopped || MARKETS.length === 0) return;
+
+        let contractType = "";
+        if (currentStrategyMode === 'UNDER') {
+            activeThreshold = 9;
+            contractType = "DIGITUNDER";
+        } else {
+            activeThreshold = 0;
+            contractType = "DIGITOVER";
+        }
+
+        cachedStakeStr = currentRunningStake.toFixed(2);
+        const floatStake = parseFloat(cachedStakeStr);
+
+        const buyObj = {
+            "buy": 1, 
+            "price": floatStake,
+            "parameters": {
+                "amount": floatStake, 
+                "basis": "stake",
+                "contract_type": contractType, 
+                "currency": "USD",
+                "duration": 1, 
+                "duration_unit": "t",
+                "symbol": MARKETS[mIdx], 
+                "barrier": activeThreshold.toString()
+            }
+        };
+        activeBuyPayload = JSON.stringify(buyObj);
+        
+        requestAnimationFrame(updateStatusUI);
+    }
+
+    window.addEventListener('load', () => {
+        const savedToken = localStorage.getItem('deriv_api_token');
+        if(savedToken && DOM['api-token']) DOM['api-token'].value = savedToken;
+        syncParameters();
+    });
+
+    function connectAccount() {
+        const token = DOM['api-token'].value.trim();
+        if(!token) return alert("Please paste a valid Account API Token.");
+
+        localStorage.setItem('deriv_api_token', token);
+        if (ws) ws.close();
+
+        DOM.status.innerText = "CONNECTING TO WEBSOCKET...";
+        DOM.status.style.color = "var(--primary)";
+
+        ws = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${APP_ID}`);
+        ENGINE_STATE = 'IDLE';
+        subscribedTickSymbol = null;
+        
+        ws.onopen = () => ws.send(JSON.stringify({ "authorize": token }));
+
+        ws.onmessage = (e) => {
+            const res = JSON.parse(e.data);
+            
+            if (res.error) {
+                console.error("Deriv Error: ", res.error.message);
+                DOM.status.innerHTML = `<span style="color:var(--danger)">API ERROR: ${res.error.message}</span>`;
+                
+                if (res.msg_type === 'buy') {
+                    if (ENGINE_STATE === 'TRADING') {
+                        ENGINE_STATE = 'ACTIVE';
+                        requestAnimationFrame(updateStatusUI);
+                    }
+                }
+                return;
+            }
+            
+            if (res.msg_type === 'authorize') {
+                botStopped = false; 
+                DOM.status.innerText = "CONNECTED! STRUCTURING ASSETS...";
+                ws.send(JSON.stringify({ "balance": 1, "subscribe": 1 }));
+                ws.send(JSON.stringify({ "proposal_open_contract": 1, "subscribe": 1 }));
+                ws.send(JSON.stringify({ "active_symbols": "brief", "product_type": "basic" }));
+            }
+            
+            if (res.msg_type === 'balance') {
+                DOM.bal.innerText = `$${res.balance.balance.toFixed(2)}`;
+            }
+
+            if (res.msg_type === 'active_symbols') {
+                const symbols = res.active_symbols.filter(s => 
+                    s.market === "synthetic_index" && s.submarket === "random_index" &&
+                    (s.symbol.match(/^R_\d+$/) || s.symbol.match(/^1HZ\d+V$/))
+                );
+                MARKETS = symbols.map(s => s.symbol).sort();
+                if(MARKETS.length === 0) MARKETS = ["R_10", "1HZ10V", "R_25", "1HZ25V", "R_50", "1HZ50V", "R_75", "1HZ75V", "R_100", "1HZ100V"];
+                startMarket();
+            }
+
+            if (res.msg_type === 'forget_all') {
+                if (ENGINE_STATE === 'SWITCHING') {
+                    subscribedTickSymbol = null; 
+                    
+                    if (!isCooldown) {
+                        mIdx = (mIdx + 1) % MARKETS.length;
+                        trades = 0;
+                        currentStrategyMode = (currentStrategyMode === 'OVER') ? 'UNDER' : 'OVER';
+                    }
+                    startMarket();
+                }
+            }
+            
+            if (res.tick) {
+                const incomingSymbol = res.tick.symbol;
+
+                if (ENGINE_STATE === 'SUBSCRIBING' && incomingSymbol === subscribedTickSymbol) {
+                    ENGINE_STATE = 'ACTIVE';
+                    requestAnimationFrame(updateStatusUI);
+                }
+
+                if (incomingSymbol !== subscribedTickSymbol) return;
+
+                const rawStr = res.tick.display_value || res.tick.quote.toString();
+                const digit = rawStr.charCodeAt(rawStr.length - 1) - 48; 
+                
+                prevTick = currTick;
+                currTick = digit;
+                
+                if (prevTick !== -1 && !botStopped && ENGINE_STATE === 'ACTIVE') {
+                    let triggered = false;
+                    
+                    if (specialModeEnabled && consecutiveLosses === 0) {
+                        if (currentStrategyMode === 'UNDER') {
+                            if (currTick === 9) triggered = true; // Touched 9 once
+                        } else {
+                            if (currTick === 0) triggered = true; // Touched 0 once
+                        }
+                    } else {
+                        if (currentStrategyMode === 'UNDER') {
+                            if (prevTick === 9 && currTick === 9) triggered = true; // Touched 9 twice
+                        } else {
+                            if (prevTick === 0 && currTick === 0) triggered = true; // Touched 0 twice
+                        }
+                    }
+
+                    if (triggered) {
+                        ENGINE_STATE = 'TRADING'; 
+                        ws.send(activeBuyPayload); 
+                        
+                        requestAnimationFrame(() => {
+                            DOM.stk.innerText = `$${cachedStakeStr}`;
+                            DOM.digit.innerText = currTick;
+                        });
+                        return; 
+                    }
+                }
+                
+                requestAnimationFrame(() => {
+                    DOM.digit.innerText = currTick;
+                });
+            }
+            
+            if (res.msg_type === 'proposal_open_contract' && res.proposal_open_contract) {
+                const contract = res.proposal_open_contract;
+                if (contract.is_sold && ENGINE_STATE === 'TRADING') {
+                    handleFinish(contract);
+                }
+            }
+        };
+
+        ws.onerror = () => {
+            DOM.status.innerText = "CONNECTION FAILURE";
+            DOM.status.style.color = "var(--danger)";
+            ENGINE_STATE = 'IDLE';
+        };
+    }
+
+    function updateStatusUI() {
+        if (botStopped) return;
+        if (ENGINE_STATE === 'SWITCHING') {
+            DOM.status.innerHTML = `<span style="color:var(--accent)">UNSUBSCRIBING STREAM...</span>`;
+            return;
+        }
+        if (ENGINE_STATE === 'SUBSCRIBING') {
+            DOM.status.innerHTML = `<span style="color:var(--primary)">WAITING FOR ENGINE ACK...</span>`;
+            return;
+        }
+        if (isCooldown) {
+            DOM.status.innerHTML = `<span style="color:var(--primary); font-weight:bold;">COOLDOWN PAUSE... ROTATING ASSETS</span>`;
+            return;
+        }
+        
+        const stateStr = consecutiveLosses > 0 ? `<span style="color:var(--danger)">RECOVERY MODE</span>` : "COMPOUND HUNTING";
+        const opStr = (currentStrategyMode === 'UNDER') ? 'UNDER' : 'OVER';
+        const specialStr = (specialModeEnabled && consecutiveLosses === 0) ? ' (SPECIAL ON)' : '';
+        DOM.status.innerHTML = `${stateStr} | ${opStr} ${activeThreshold}${specialStr}`;
+    }
+
+    function handleFinish(c) {
+        if (ENGINE_STATE !== 'TRADING') return;
+
+        const p = (c.status === 'won' ? c.profit : -c.buy_price);
+        
+        subMilestoneProfit += p; 
+        totalProfit += p; 
+        trades++;
+        
+        if (c.status === 'won') {
+            consecutiveLosses = 0;
+            currentRunningStake = currentRunningStake + p; 
+        } else {
+            consecutiveLosses++;
+            currentRunningStake = CONFIG.stake; 
+        }
+
+        if (totalProfit <= -CONFIG.sl) return stopBot("STOP LOSS BREACHED!", "var(--danger)");
+        if (totalProfit >= CONFIG.tp) return stopBot("TARGET TAKE PROFIT MET!", "var(--success)");
+
+        if (subMilestoneProfit >= subMilestoneTarget) {
+            triggerMilestoneShift();
+            setTimeout(() => { updateUI(c); dispatchAuditModal(c); }, 0);
+            return;
+        }
+
+        if (trades >= 3) {
+            rotate();
+        } else {
+            ENGINE_STATE = 'ACTIVE'; 
+            precompileExecutionEngine(); 
+        }
+
+        setTimeout(() => {
+            updateUI(c);
+            dispatchAuditModal(c);
+        }, 0);
+    }
+
+    function dispatchAuditModal(c) {
+        const rawExitSource = c.exit_tick_display_value || c.current_spot_display_value || c.exit_tick || "0";
+        const exitDigit = rawExitSource.toString().slice(-1);
+        const targetLabel = `${c.contract_type.replace("DIGIT","")} ${c.barrier}`;
+        
+        DOM['audit-target'].innerText = targetLabel;
+        DOM['audit-exit'].innerText = exitDigit;
+        
+        if (c.status === 'won') {
+            DOM['audit-outcome'].innerText = "SUCCESS / WON";
+            DOM['audit-outcome'].style.color = "var(--success)";
+        } else {
+            DOM['audit-outcome'].innerText = "FAILED / LOST";
+            DOM['audit-outcome'].style.color = "var(--danger)";
+        }
+        DOM['audit-modal'].classList.add('active');
+    }
+
+    function triggerMilestoneShift() {
+        isCooldown = true;
+        subMilestoneProfit = 0.00; 
+        currentMilestone++;
+        currentRunningStake = CONFIG.stake; 
+        resetTickMemory();
+
+        DOM.status.innerHTML = `<span style="color:var(--success); font-weight:bold;">MILESTONE SECURED! COOLING DOWN...</span>`;
+        
+        if (ws) {
+            ENGINE_STATE = 'SWITCHING';
+            ws.send(JSON.stringify({ "forget_all": "ticks" }));
+        }
+
+        setTimeout(() => {
+            isCooldown = false;
+            if (ENGINE_STATE === 'ACTIVE' || ENGINE_STATE === 'IDLE' || ENGINE_STATE === 'SWITCHING') {
+                mIdx = (mIdx + 1) % MARKETS.length;
+                trades = 0;
+                currentStrategyMode = (currentStrategyMode === 'OVER') ? 'UNDER' : 'OVER';
+                startMarket();
+            }
+        }, 5000); 
+    }
+
+    function closeAudit() { DOM['audit-modal'].classList.remove('active'); }
+
+    function stopBot(message, color) {
+        botStopped = true;
+        ENGINE_STATE = 'IDLE';
+        currentRunningStake = CONFIG.stake;
+        if(ws) {
+            ws.send(JSON.stringify({ "forget_all": "ticks" }));
+            subscribedTickSymbol = null;
+        }
+        DOM.status.innerText = message;
+        DOM.status.style.color = color;
+    }
+
+    function updateUI(c) {
+        DOM['ui-total-profit'].innerText = `$${totalProfit.toFixed(2)}`;
+        DOM['ui-milestone'].innerText = `${Math.min(currentMilestone, MILESTONE_SESSIONS)} / ${MILESTONE_SESSIONS}`;
+        DOM['prog-label'].innerText = `MILESTONE ${Math.min(currentMilestone, MILESTONE_SESSIONS)} PROFIT PROGRESS`;
+        DOM['prog-val'].innerText = `$${Math.max(subMilestoneProfit, 0).toFixed(2)} / $${subMilestoneTarget.toFixed(2)}`;
+        
+        const percentage = subMilestoneTarget > 0 ? (subMilestoneProfit / subMilestoneTarget) * 100 : 0;
+        DOM['progress-fill'].style.width = `${Math.min(Math.max(percentage, 0), 100)}%`;
+        
+        const rawExitSource = c.exit_tick_display_value || c.current_spot_display_value || c.exit_tick || "0";
+        const exit = rawExitSource.toString().slice(-1);
+        const targetLabel = `${c.contract_type.replace("DIGIT","")} ${c.barrier}`;
+        
+        const row = `<tr>
+            <td style="font-family:'Orbitron'; font-weight:bold; color: #fff;">${c.symbol}</td>
+            <td style="color:var(--primary)">${targetLabel}</td>
+            <td style="font-family:'Orbitron'; font-weight:bold;">${exit}</td>
+            <td style="color:${c.status === 'won' ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">${c.status.toUpperCase()}</td>
+            <td>$${c.buy_price.toFixed(2)}</td>
+        </tr>`;
+        
+        DOM.logs.insertAdjacentHTML('afterbegin', row);
+    }
+
+    function resetTickMemory() {
+        prevTick = -1;
+        currTick = -1;
+    }
+
+    function startMarket() {
+        if(botStopped || !ws || MARKETS.length === 0) return;
+        
+        const targetSymbol = MARKETS[mIdx];
+        if (subscribedTickSymbol === targetSymbol && ENGINE_STATE === 'ACTIVE') return;
+        
+        ENGINE_STATE = 'SUBSCRIBING'; 
+        resetTickMemory();
+        precompileExecutionEngine();
+        
+        DOM['mkt-badge'].innerText = `${targetSymbol} | MODE: ${currentStrategyMode}`;
+        
+        ws.send(JSON.stringify({ "ticks": targetSymbol, "subscribe": 1 }));
+        subscribedTickSymbol = targetSymbol; 
+    }
+
+    function rotate() {
+        if(botStopped || !ws || ENGINE_STATE === 'SWITCHING') return;
+        
+        ENGINE_STATE = 'SWITCHING'; 
+        ws.send(JSON.stringify({ "forget_all": "ticks" }));
+    }
+</script>
+</body>
+</html>
