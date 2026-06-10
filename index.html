@@ -59,14 +59,20 @@
                     <button id="btn-connect" class="btn-action" style="padding: 0 20px; width: auto; font-size: 0.8rem;" onclick="connectAccount()">Connect Bot</button>
                 </div>
             </div>
-            <div class="config-box" style="flex-direction: row; align-items: center; justify-content: center; gap: 10px; margin-top: 5px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                <input type="checkbox" id="param-special" style="accent-color: var(--primary); transform: scale(1.2); cursor: pointer;" onchange="specialModeEnabled = this.checked; precompileExecutionEngine();">
-                <label for="param-special" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.75rem;">Special Mode (Over 0 / Under 9)</label>
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+                <div class="config-box" style="flex: 1; flex-direction: row; align-items: center; justify-content: center; gap: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <input type="checkbox" id="param-special" style="accent-color: var(--primary); transform: scale(1.2); cursor: pointer;" onchange="specialModeEnabled = this.checked; precompileExecutionEngine();">
+                    <label for="param-special" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.75rem;">Special Mode (Over 0 / Under 9)</label>
+                </div>
+                <div class="config-box" style="flex: 1; flex-direction: row; align-items: center; justify-content: center; gap: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--accent);">
+                    <input type="checkbox" id="param-continuous" style="accent-color: var(--accent); transform: scale(1.2); cursor: pointer;" onchange="continuousModeEnabled = this.checked; precompileExecutionEngine();">
+                    <label for="param-continuous" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.75rem; font-weight: bold;">Continuous Hyper-Drive</label>
+                </div>
             </div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.3 (EXTREME SPEED)</div>
+            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.4 (HYPER-SPEED)</div>
             <div id="mkt-badge" style="font-size: 0.65rem; background: rgba(0,210,255,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--primary); font-family: 'Orbitron';">DISCONNECTED</div>
         </div>
 
@@ -114,7 +120,7 @@
 <script>
     const DOM = {};
     window.addEventListener('DOMContentLoaded', () => {
-        ['api-token', 'param-special', 'status', 'mkt-badge', 'digit', 'prog-label', 'prog-val', 'progress-fill', 
+        ['api-token', 'param-special', 'param-continuous', 'status', 'mkt-badge', 'digit', 'prog-label', 'prog-val', 'progress-fill', 
          'ui-milestone', 'ui-total-profit', 'bal', 'stk', 'param-stake', 
          'param-tp', 'param-sl', 'logs', 'audit-modal', 'audit-target', 'audit-exit', 'audit-outcome']
         .forEach(id => DOM[id] = document.getElementById(id));
@@ -142,6 +148,7 @@
     let activeThreshold = 0;      
     let activeBuyPayload = "";    
     let specialModeEnabled = false; 
+    let continuousModeEnabled = false;
 
     function syncParameters() {
         if(!DOM['param-stake']) return; 
@@ -279,20 +286,24 @@
                 prevTick = currTick;
                 currTick = digit;
                 
-                if (prevTick !== -1 && !botStopped && ENGINE_STATE === 'ACTIVE') {
+                if (!botStopped && ENGINE_STATE === 'ACTIVE') {
                     let triggered = false;
                     
-                    if (specialModeEnabled && consecutiveLosses === 0) {
-                        if (currentStrategyMode === 'UNDER') {
-                            if (currTick === 9) triggered = true; // Touched 9 once
+                    if (continuousModeEnabled) {
+                        triggered = true; // Every single tick fires instantly
+                    } else if (prevTick !== -1) {
+                        if (specialModeEnabled && consecutiveLosses === 0) {
+                            if (currentStrategyMode === 'UNDER') {
+                                if (currTick === 9) triggered = true;
+                            } else {
+                                if (currTick === 0) triggered = true;
+                            }
                         } else {
-                            if (currTick === 0) triggered = true; // Touched 0 once
-                        }
-                    } else {
-                        if (currentStrategyMode === 'UNDER') {
-                            if (prevTick === 9 && currTick === 9) triggered = true; // Touched 9 twice
-                        } else {
-                            if (prevTick === 0 && currTick === 0) triggered = true; // Touched 0 twice
+                            if (currentStrategyMode === 'UNDER') {
+                                if (prevTick === 9 && currTick === 9) triggered = true;
+                            } else {
+                                if (prevTick === 0 && currTick === 0) triggered = true;
+                            }
                         }
                     }
 
@@ -339,14 +350,21 @@
             return;
         }
         if (isCooldown) {
-            DOM.status.innerHTML = `<span style="color:var(--primary); font-weight:bold;">COOLDOWN PAUSE... ROTATING ASSETS</span>`;
+            DOM.status.innerHTML = `<span style="color:var(--success); font-weight:bold;">MILESTONE SECURED! COOLING DOWN...</span>`;
             return;
         }
         
         const stateStr = consecutiveLosses > 0 ? `<span style="color:var(--danger)">RECOVERY MODE</span>` : "COMPOUND HUNTING";
         const opStr = (currentStrategyMode === 'UNDER') ? 'UNDER' : 'OVER';
-        const specialStr = (specialModeEnabled && consecutiveLosses === 0) ? ' (SPECIAL ON)' : '';
-        DOM.status.innerHTML = `${stateStr} | ${opStr} ${activeThreshold}${specialStr}`;
+        
+        let modeDetail = ` ${activeThreshold}`;
+        if (continuousModeEnabled) {
+            modeDetail = " (HYPER-DRIVE RUNNING)";
+        } else if (specialModeEnabled && consecutiveLosses === 0) {
+            modeDetail = ` ${activeThreshold} (SPECIAL ON)`;
+        }
+        
+        DOM.status.innerHTML = `${stateStr} | ${opStr}${modeDetail}`;
     }
 
     function handleFinish(c) {
