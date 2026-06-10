@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,7 +73,7 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.7 (PRO-SPEED DUAL FILTER)</div>
+            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.6 (LIGHTSPEED CORE)</div>
             <div id="mkt-badge" style="font-size: 0.65rem; background: rgba(0,210,255,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--primary); font-family: 'Orbitron';">DISCONNECTED</div>
         </div>
 
@@ -283,11 +284,13 @@
                     let triggered = false;
                     
                     if (continuousModeEnabled) {
-                        // Hyper-speed Dual Protection Filter: Skip if tick is exactly 0 OR exactly 9
-                        if (currTick === 0 || currTick === 9) {
-                            triggered = false; // Instantly skip/jump without executing
+                        // Hyper-speed Skip Conditions
+                        if (currentStrategyMode === 'OVER' && currTick === 0) {
+                            triggered = false; // Jump trade instantly
+                        } else if (currentStrategyMode === 'UNDER' && currTick === 9) {
+                            triggered = false; // Jump trade instantly
                         } else {
-                            triggered = true;  // Otherwise, place market order instantly on the pipe
+                            triggered = true;  // Zero restriction execution
                         }
                     } else if (prevTick !== -1 && ENGINE_STATE === 'ACTIVE') {
                         if (specialModeEnabled && consecutiveLosses === 0) {
