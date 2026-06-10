@@ -72,7 +72,7 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.4 (HYPER-SPEED)</div>
+            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.5 (HYPER-DRIVE PRO)</div>
             <div id="mkt-badge" style="font-size: 0.65rem; background: rgba(0,210,255,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--primary); font-family: 'Orbitron';">DISCONNECTED</div>
         </div>
 
@@ -290,7 +290,14 @@
                     let triggered = false;
                     
                     if (continuousModeEnabled) {
-                        triggered = true; // Every single tick fires instantly
+                        // Hyper-Drive Skip Checks
+                        if (currentStrategyMode === 'OVER' && currTick === 0) {
+                            triggered = false; // Jump/Skip trade when 0 appears on Over 0
+                        } else if (currentStrategyMode === 'UNDER' && currTick === 9) {
+                            triggered = false; // Jump/Skip trade when 9 appears on Under 9
+                        } else {
+                            triggered = true;  // Otherwise, trade every incoming tick instantly
+                        }
                     } else if (prevTick !== -1) {
                         if (specialModeEnabled && consecutiveLosses === 0) {
                             if (currentStrategyMode === 'UNDER') {
@@ -389,7 +396,7 @@
 
         if (subMilestoneProfit >= subMilestoneTarget) {
             triggerMilestoneShift();
-            setTimeout(() => { updateUI(c); dispatchAuditModal(c); }, 0);
+            setTimeout(() => { updateUI(c); if(!continuousModeEnabled) dispatchAuditModal(c); }, 0);
             return;
         }
 
@@ -402,7 +409,9 @@
 
         setTimeout(() => {
             updateUI(c);
-            dispatchAuditModal(c);
+            if (!continuousModeEnabled) {
+                dispatchAuditModal(c);
+            }
         }, 0);
     }
 
