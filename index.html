@@ -399,10 +399,22 @@
     function handleFinish(c) {
         const p = (c.status === 'won' ? c.profit : -c.buy_price);
         
+        // 1. Immediately calculate true session profits
         subMilestoneProfit += p; 
         totalProfit += p; 
         trades++;
         
+        // 2. CRITICAL AUDIT: Check global boundaries before structural or stake mutations
+        if (totalProfit <= -CONFIG.sl) {
+            updateUI(c);
+            return stopBot("STOP LOSS BREACHED!", "var(--danger)");
+        }
+        if (totalProfit >= CONFIG.tp) {
+            updateUI(c);
+            return stopBot("TARGET TAKE PROFIT MET!", "var(--success)");
+        }
+
+        // 3. Staking Engine updates
         if (c.status === 'won') {
             consecutiveLosses = 0;
             currentRunningStake = currentRunningStake + p; 
@@ -411,15 +423,17 @@
             currentRunningStake = CONFIG.stake; 
         }
 
-        if (totalProfit <= -CONFIG.sl) return stopBot("STOP LOSS BREACHED!", "var(--danger)");
-        if (totalProfit >= CONFIG.tp) return stopBot("TARGET TAKE PROFIT MET!", "var(--success)");
-
+        // 4. Milestone Shift Check: Cleanly handle asset rotations
         if (subMilestoneProfit >= subMilestoneTarget) {
             triggerMilestoneShift();
-            setTimeout(() => { updateUI(c); if(!continuousModeEnabled) dispatchAuditModal(c); }, 0);
-            return;
+            setTimeout(() => { 
+                updateUI(c); 
+                if(!continuousModeEnabled) dispatchAuditModal(c); 
+            }, 0);
+            return; // Terminate execution thread immediately
         }
 
+        // 5. Standard rotation iteration
         if (trades >= 3) {
             rotate();
         } else {
