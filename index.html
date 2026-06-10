@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Khamis DYNAMIC STRAT | ULTRA-LOW LATENCY ENGINE</title>
+    <title>Khamis DYNAMIC STRAT | LIGHTSPEED ENGINE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #00d2ff; --accent: #9d50bb; --success: #00ff88; --danger: #ff4b2b; --glass: rgba(15, 20, 25, 0.85); }
@@ -72,7 +72,7 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.5 (HYPER-DRIVE PRO)</div>
+            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.6 (LIGHTSPEED CORE)</div>
             <div id="mkt-badge" style="font-size: 0.65rem; background: rgba(0,210,255,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--primary); font-family: 'Orbitron';">DISCONNECTED</div>
         </div>
 
@@ -225,13 +225,6 @@
             if (res.error) {
                 console.error("Deriv Error: ", res.error.message);
                 DOM.status.innerHTML = `<span style="color:var(--danger)">API ERROR: ${res.error.message}</span>`;
-                
-                if (res.msg_type === 'buy') {
-                    if (ENGINE_STATE === 'TRADING') {
-                        ENGINE_STATE = 'ACTIVE';
-                        requestAnimationFrame(updateStatusUI);
-                    }
-                }
                 return;
             }
             
@@ -286,36 +279,32 @@
                 prevTick = currTick;
                 currTick = digit;
                 
-                if (!botStopped && ENGINE_STATE === 'ACTIVE') {
+                if (!botStopped && (ENGINE_STATE === 'ACTIVE' || (continuousModeEnabled && ENGINE_STATE === 'TRADING'))) {
                     let triggered = false;
                     
                     if (continuousModeEnabled) {
-                        // Hyper-Drive Skip Checks
+                        // Hyper-speed Skip Conditions
                         if (currentStrategyMode === 'OVER' && currTick === 0) {
-                            triggered = false; // Jump/Skip trade when 0 appears on Over 0
+                            triggered = false; // Jump trade instantly
                         } else if (currentStrategyMode === 'UNDER' && currTick === 9) {
-                            triggered = false; // Jump/Skip trade when 9 appears on Under 9
+                            triggered = false; // Jump trade instantly
                         } else {
-                            triggered = true;  // Otherwise, trade every incoming tick instantly
+                            triggered = true;  // Zero restriction execution
                         }
-                    } else if (prevTick !== -1) {
+                    } else if (prevTick !== -1 && ENGINE_STATE === 'ACTIVE') {
                         if (specialModeEnabled && consecutiveLosses === 0) {
-                            if (currentStrategyMode === 'UNDER') {
-                                if (currTick === 9) triggered = true;
-                            } else {
-                                if (currTick === 0) triggered = true;
-                            }
+                            if (currentStrategyMode === 'UNDER' && currTick === 9) triggered = true;
+                            if (currentStrategyMode === 'OVER' && currTick === 0) triggered = true;
                         } else {
-                            if (currentStrategyMode === 'UNDER') {
-                                if (prevTick === 9 && currTick === 9) triggered = true;
-                            } else {
-                                if (prevTick === 0 && currTick === 0) triggered = true;
-                            }
+                            if (currentStrategyMode === 'UNDER' && prevTick === 9 && currTick === 9) triggered = true;
+                            if (currentStrategyMode === 'OVER' && prevTick === 0 && currTick === 0) triggered = true;
                         }
                     }
 
                     if (triggered) {
-                        ENGINE_STATE = 'TRADING'; 
+                        if (!continuousModeEnabled) {
+                            ENGINE_STATE = 'TRADING';
+                        }
                         ws.send(activeBuyPayload); 
                         
                         requestAnimationFrame(() => {
@@ -333,7 +322,7 @@
             
             if (res.msg_type === 'proposal_open_contract' && res.proposal_open_contract) {
                 const contract = res.proposal_open_contract;
-                if (contract.is_sold && ENGINE_STATE === 'TRADING') {
+                if (contract.is_sold) {
                     handleFinish(contract);
                 }
             }
@@ -366,7 +355,7 @@
         
         let modeDetail = ` ${activeThreshold}`;
         if (continuousModeEnabled) {
-            modeDetail = " (HYPER-DRIVE RUNNING)";
+            modeDetail = " (LIGHTSPEED PIPELINE)";
         } else if (specialModeEnabled && consecutiveLosses === 0) {
             modeDetail = ` ${activeThreshold} (SPECIAL ON)`;
         }
@@ -375,8 +364,6 @@
     }
 
     function handleFinish(c) {
-        if (ENGINE_STATE !== 'TRADING') return;
-
         const p = (c.status === 'won' ? c.profit : -c.buy_price);
         
         subMilestoneProfit += p; 
@@ -403,7 +390,9 @@
         if (trades >= 3) {
             rotate();
         } else {
-            ENGINE_STATE = 'ACTIVE'; 
+            if (!continuousModeEnabled) {
+                ENGINE_STATE = 'ACTIVE'; 
+            }
             precompileExecutionEngine(); 
         }
 
@@ -449,7 +438,7 @@
 
         setTimeout(() => {
             isCooldown = false;
-            if (ENGINE_STATE === 'ACTIVE' || ENGINE_STATE === 'IDLE' || ENGINE_STATE === 'SWITCHING') {
+            if (ENGINE_STATE === 'ACTIVE' || ENGINE_STATE === 'IDLE' || ENGINE_STATE === 'SWITCHING' || ENGINE_STATE === 'TRADING') {
                 mIdx = (mIdx + 1) % MARKETS.length;
                 trades = 0;
                 currentStrategyMode = (currentStrategyMode === 'OVER') ? 'UNDER' : 'OVER';
