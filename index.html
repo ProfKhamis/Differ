@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -60,20 +59,24 @@
                     <button id="btn-connect" class="btn-action" style="padding: 0 20px; width: auto; font-size: 0.8rem;" onclick="connectAccount()">Connect Bot</button>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 5px;">
-                <div class="config-box" style="flex: 1; flex-direction: row; align-items: center; justify-content: center; gap: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                    <input type="checkbox" id="param-special" style="accent-color: var(--primary); transform: scale(1.2); cursor: pointer;" onchange="specialModeEnabled = this.checked; precompileExecutionEngine();">
-                    <label for="param-special" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.75rem;">Special Mode (Over 0 / Under 9)</label>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 5px;">
+                <div class="config-box" style="flex-direction: row; align-items: center; justify-content: center; gap: 6px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <input type="checkbox" id="param-special" style="accent-color: var(--primary); transform: scale(1.1); cursor: pointer;" onchange="specialModeEnabled = this.checked; precompileExecutionEngine();">
+                    <label for="param-special" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.65rem;">Special Mode (Over 0/Under 9)</label>
                 </div>
-                <div class="config-box" style="flex: 1; flex-direction: row; align-items: center; justify-content: center; gap: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--accent);">
-                    <input type="checkbox" id="param-continuous" style="accent-color: var(--accent); transform: scale(1.2); cursor: pointer;" onchange="continuousModeEnabled = this.checked; precompileExecutionEngine();">
-                    <label for="param-continuous" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.75rem; font-weight: bold;">Continuous Hyper-Drive</label>
+                <div class="config-box" style="flex-direction: row; align-items: center; justify-content: center; gap: 6px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--success);">
+                    <input type="checkbox" id="param-differs" style="accent-color: var(--success); transform: scale(1.1); cursor: pointer;" onchange="differsModeEnabled = this.checked; precompileExecutionEngine();">
+                    <label for="param-differs" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.65rem; font-weight: bold;">Digit Differs Mode</label>
+                </div>
+                <div class="config-box" style="flex-direction: row; align-items: center; justify-content: center; gap: 6px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--accent);">
+                    <input type="checkbox" id="param-continuous" style="accent-color: var(--accent); transform: scale(1.1); cursor: pointer;" onchange="continuousModeEnabled = this.checked; precompileExecutionEngine();">
+                    <label for="param-continuous" class="stat-label" style="margin: 0; color: #fff; cursor: pointer; font-size: 0.65rem; font-weight: bold;">Continuous Drive</label>
                 </div>
             </div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V14.6 (LIGHTSPEED CORE)</div>
+            <div style="font-family: 'Orbitron'; font-size: 1.1rem; color: var(--primary);">SOVEREIGN V15.0 (LIGHTSPEED HYBRID)</div>
             <div id="mkt-badge" style="font-size: 0.65rem; background: rgba(0,210,255,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--primary); font-family: 'Orbitron';">DISCONNECTED</div>
         </div>
 
@@ -121,7 +124,7 @@
 <script>
     const DOM = {};
     window.addEventListener('DOMContentLoaded', () => {
-        ['api-token', 'param-special', 'param-continuous', 'status', 'mkt-badge', 'digit', 'prog-label', 'prog-val', 'progress-fill', 
+        ['api-token', 'param-special', 'param-differs', 'param-continuous', 'status', 'mkt-badge', 'digit', 'prog-label', 'prog-val', 'progress-fill', 
          'ui-milestone', 'ui-total-profit', 'bal', 'stk', 'param-stake', 
          'param-tp', 'param-sl', 'logs', 'audit-modal', 'audit-target', 'audit-exit', 'audit-outcome']
         .forEach(id => DOM[id] = document.getElementById(id));
@@ -150,6 +153,7 @@
     let activeBuyPayload = "";    
     let specialModeEnabled = false; 
     let continuousModeEnabled = false;
+    let differsModeEnabled = false;
 
     function syncParameters() {
         if(!DOM['param-stake']) return; 
@@ -168,7 +172,10 @@
         if (botStopped || MARKETS.length === 0) return;
 
         let contractType = "";
-        if (currentStrategyMode === 'UNDER') {
+        if (differsModeEnabled) {
+            activeThreshold = (currTick !== -1) ? currTick : 0;
+            contractType = "DIGITDIFF";
+        } else if (currentStrategyMode === 'UNDER') {
             activeThreshold = 9;
             contractType = "DIGITUNDER";
         } else {
@@ -280,17 +287,37 @@
                 prevTick = currTick;
                 currTick = digit;
                 
+                if (differsModeEnabled) {
+                    activeThreshold = currTick;
+                    const floatStake = parseFloat(cachedStakeStr);
+                    activeBuyPayload = JSON.stringify({
+                        "buy": 1,
+                        "price": floatStake,
+                        "parameters": {
+                            "amount": floatStake,
+                            "basis": "stake",
+                            "contract_type": "DIGITDIFF",
+                            "currency": "USD",
+                            "duration": 1,
+                            "duration_unit": "t",
+                            "symbol": MARKETS[mIdx],
+                            "barrier": currTick.toString()
+                        }
+                    });
+                }
+                
                 if (!botStopped && (ENGINE_STATE === 'ACTIVE' || (continuousModeEnabled && ENGINE_STATE === 'TRADING'))) {
                     let triggered = false;
                     
-                    if (continuousModeEnabled) {
-                        // Hyper-speed Skip Conditions
+                    if (differsModeEnabled) {
+                        triggered = true; 
+                    } else if (continuousModeEnabled) {
                         if (currentStrategyMode === 'OVER' && currTick === 0) {
-                            triggered = false; // Jump trade instantly
+                            triggered = false; 
                         } else if (currentStrategyMode === 'UNDER' && currTick === 9) {
-                            triggered = false; // Jump trade instantly
+                            triggered = false; 
                         } else {
-                            triggered = true;  // Zero restriction execution
+                            triggered = true;  
                         }
                     } else if (prevTick !== -1 && ENGINE_STATE === 'ACTIVE') {
                         if (specialModeEnabled && consecutiveLosses === 0) {
@@ -348,6 +375,11 @@
         }
         if (isCooldown) {
             DOM.status.innerHTML = `<span style="color:var(--success); font-weight:bold;">MILESTONE SECURED! COOLING DOWN...</span>`;
+            return;
+        }
+        
+        if (differsModeEnabled) {
+            DOM.status.innerHTML = `<span style="color:var(--success)">DIFFERS PIPELINE RUNNING</span> | TARGET: TICK`;
             return;
         }
         
