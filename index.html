@@ -221,7 +221,8 @@
         DOM.status.innerText = "CONNECTING TO WEBSOCKET...";
         DOM.status.style.color = "var(--primary)";
 
-        ws = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${APP_ID}`);
+        // Swapped to the updated modern Deriv API WebSocket endpoint
+        ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`);
         ENGINE_STATE = 'IDLE';
         subscribedTickSymbol = null;
         
@@ -399,12 +400,10 @@
     function handleFinish(c) {
         const p = (c.status === 'won' ? c.profit : -c.buy_price);
         
-        // 1. Immediately calculate true session profits
         subMilestoneProfit += p; 
         totalProfit += p; 
         trades++;
         
-        // 2. CRITICAL AUDIT: Check global boundaries before structural or stake mutations
         if (totalProfit <= -CONFIG.sl) {
             updateUI(c);
             return stopBot("STOP LOSS BREACHED!", "var(--danger)");
@@ -414,7 +413,6 @@
             return stopBot("TARGET TAKE PROFIT MET!", "var(--success)");
         }
 
-        // 3. Staking Engine updates
         if (c.status === 'won') {
             consecutiveLosses = 0;
             currentRunningStake = currentRunningStake + p; 
@@ -423,17 +421,15 @@
             currentRunningStake = CONFIG.stake; 
         }
 
-        // 4. Milestone Shift Check: Cleanly handle asset rotations
         if (subMilestoneProfit >= subMilestoneTarget) {
             triggerMilestoneShift();
             setTimeout(() => { 
                 updateUI(c); 
                 if(!continuousModeEnabled) dispatchAuditModal(c); 
             }, 0);
-            return; // Terminate execution thread immediately
+            return; 
         }
 
-        // 5. Standard rotation iteration
         if (trades >= 3) {
             rotate();
         } else {
